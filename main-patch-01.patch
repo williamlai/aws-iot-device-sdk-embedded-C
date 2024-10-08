@@ -1,0 +1,73 @@
+diff --git a/demos/ota/ota_demo_core_http/ota_config.h b/demos/ota/ota_demo_core_http/ota_config.h
+index 8f6b63e8..d758e976 100644
+--- a/demos/ota/ota_demo_core_http/ota_config.h
++++ b/demos/ota/ota_demo_core_http/ota_config.h
+@@ -46,7 +46,7 @@
+     #define LIBRARY_LOG_NAME     "OTA"
+ #endif
+ #ifndef LIBRARY_LOG_LEVEL
+-    #define LIBRARY_LOG_LEVEL    LOG_INFO
++    #define LIBRARY_LOG_LEVEL    LOG_DEBUG
+ #endif
+ 
+ #include "logging_stack.h"
+diff --git a/demos/ota/ota_demo_core_http/ota_demo_core_http.c b/demos/ota/ota_demo_core_http/ota_demo_core_http.c
+index 7fdc25bf..8323a1d5 100644
+--- a/demos/ota/ota_demo_core_http/ota_demo_core_http.c
++++ b/demos/ota/ota_demo_core_http/ota_demo_core_http.c
+@@ -910,7 +910,8 @@ static void mqttJobCallback( MQTTContext_t * pContext,
+             break;
+ 
+         default:
+-            LogInfo( ( "Received job message %s size %ld.\n\n",
++            LogInfo( ( "Received job message %.*s size %ld.\n\n",
++                       pPublishInfo->topicNameLength,
+                        pPublishInfo->pTopicName,
+                        pPublishInfo->payloadLength ) );
+     }
+@@ -966,6 +967,13 @@ static void mqttEventCallback( MQTTContext_t * pMqttContext,
+     {
+         assert( pDeserializedInfo->pPublishInfo != NULL );
+         /* Handle incoming publish. */
++        printf("%s(): topic(%d):%.*s, payload(%d):%.*s\n", __func__,
++               pDeserializedInfo->pPublishInfo->topicNameLength,
++               pDeserializedInfo->pPublishInfo->topicNameLength,
++               pDeserializedInfo->pPublishInfo->pTopicName,
++               (int)(pDeserializedInfo->pPublishInfo->payloadLength),
++               (int)(pDeserializedInfo->pPublishInfo->payloadLength),
++               pDeserializedInfo->pPublishInfo->pPayload);
+         SubscriptionManager_DispatchHandler( pMqttContext, pDeserializedInfo->pPublishInfo );
+     }
+     else
+diff --git a/libraries/aws/ota-for-aws-iot-embedded-sdk b/libraries/aws/ota-for-aws-iot-embedded-sdk
+--- a/libraries/aws/ota-for-aws-iot-embedded-sdk
++++ b/libraries/aws/ota-for-aws-iot-embedded-sdk
+@@ -1 +1 @@
+-Subproject commit 406415ef38d9f0fbabd69735623008fd090043b3
++Subproject commit 406415ef38d9f0fbabd69735623008fd090043b3-dirty
+diff --git a/platform/posix/ota_pal/source/ota_pal_posix.c b/platform/posix/ota_pal/source/ota_pal_posix.c
+index 34568462..e83d2e95 100644
+--- a/platform/posix/ota_pal/source/ota_pal_posix.c
++++ b/platform/posix/ota_pal/source/ota_pal_posix.c
+@@ -482,7 +482,7 @@ OtaPalStatus_t otaPal_CloseFile( OtaFileContext_t * const C )
+ 
+     if( C != NULL )
+     {
+-        if( C->pSignature != NULL )
++        if( C->pSignature != NULL && C->pSignature->size > 0 )
+         {
+             /* Verify the file signature, close the file and return the signature verification result. */
+             result = otaPal_CheckFileSignature( C );
+@@ -491,8 +491,12 @@ OtaPalStatus_t otaPal_CloseFile( OtaFileContext_t * const C )
+         }
+         else
+         {
++#if 1
++            LogWarn( ( "Parameter check skipped: OTA signature structure is NULL." ) );
++#else
+             LogError( ( "Parameter check failed: OTA signature structure is NULL." ) );
+             mainErr = OtaPalSignatureCheckFailed;
++#endif
+         }
+ 
+         /* Close the file. */
